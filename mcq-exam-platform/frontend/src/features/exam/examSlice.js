@@ -3,44 +3,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axiosClient from '../../api/axiosClient';
 
-export const deleteExam = createAsyncThunk('exam/deleteExam', async (examId, { rejectWithValue }) => {
-  try {
-    await axiosClient.delete(`/exams/${examId}`);
-    return examId;
-  } catch (err) {
-    return rejectWithValue(err.response?.data?.message || 'ডিলিট ব্যর্থ হয়েছে');
-  }
-});
-
-export const setResourceLink = createAsyncThunk('exam/setResourceLink', async ({ id, link }, { rejectWithValue }) => {
-  try {
-    const { data } = await axiosClient.put(`/exams/${id}/resource-link`, { link });
-    return data;
-  } catch (err) {
-    return rejectWithValue(err.response?.data?.message || 'সেভ করা যায়নি');
-  }
-});
-
-export const uploadResourcePdf = createAsyncThunk('exam/uploadResourcePdf', async ({ id, formData }, { rejectWithValue }) => {
-  try {
-    const { data } = await axiosClient.post(`/exams/${id}/resource-pdf`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-    return data;
-  } catch (err) {
-    return rejectWithValue(err.response?.data?.message || 'আপলোড ব্যর্থ হয়েছে');
-  }
-});
-
-export const removeResource = createAsyncThunk('exam/removeResource', async (id, { rejectWithValue }) => {
-  try {
-    const { data } = await axiosClient.delete(`/exams/${id}/resource`);
-    return data;
-  } catch (err) {
-    return rejectWithValue(err.response?.data?.message);
-  }
-});
-
 export const uploadExamPdf = createAsyncThunk('exam/uploadPdf', async (formData, { rejectWithValue }) => {
   try {
     const { data } = await axiosClient.post('/exams/upload', formData, {
@@ -49,6 +11,15 @@ export const uploadExamPdf = createAsyncThunk('exam/uploadPdf', async (formData,
     return data;
   } catch (err) {
     return rejectWithValue(err.response?.data?.message || 'আপলোড ব্যর্থ হয়েছে');
+  }
+});
+
+export const deleteExam = createAsyncThunk('exam/deleteExam', async (examId, { rejectWithValue }) => {
+  try {
+    await axiosClient.delete(`/exams/${examId}`);
+    return examId;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || 'ডিলিট ব্যর্থ হয়েছে');
   }
 });
 
@@ -100,6 +71,35 @@ export const fetchExamResults = createAsyncThunk('exam/fetchResults', async (id,
   }
 });
 
+export const setResourceLink = createAsyncThunk('exam/setResourceLink', async ({ id, link }, { rejectWithValue }) => {
+  try {
+    const { data } = await axiosClient.put(`/exams/${id}/resource-link`, { link });
+    return data;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || 'সেভ করা যায়নি');
+  }
+});
+
+export const uploadResourcePdf = createAsyncThunk('exam/uploadResourcePdf', async ({ id, formData }, { rejectWithValue }) => {
+  try {
+    const { data } = await axiosClient.post(`/exams/${id}/resource-pdf`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || 'আপলোড ব্যর্থ হয়েছে');
+  }
+});
+
+export const removeResource = createAsyncThunk('exam/removeResource', async (id, { rejectWithValue }) => {
+  try {
+    const { data } = await axiosClient.delete(`/exams/${id}/resource`);
+    return data;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message);
+  }
+});
+
 export const deleteQuestion = createAsyncThunk('exam/deleteQuestion', async (questionId, { rejectWithValue }) => {
   try {
     await axiosClient.delete(`/exams/questions/${questionId}`);
@@ -128,7 +128,7 @@ const examSlice = createSlice({
     currentExam: null,
     questions: [],
     results: [],
-        resultsDisabledMessage: null,
+    resultsDisabledMessage: null,
     shareLink: null,
     status: 'idle',
     error: null,
@@ -159,7 +159,10 @@ const examSlice = createSlice({
         state.currentExam = action.payload.exam;
         state.shareLink = action.payload.shareLink;
       })
-           .addCase(fetchExamResults.fulfilled, (state, action) => {
+      .addCase(deleteExam.fulfilled, (state, action) => {
+        state.myExams = state.myExams.filter((e) => e._id !== action.payload);
+      })
+      .addCase(fetchExamResults.fulfilled, (state, action) => {
         if (Array.isArray(action.payload)) {
           state.results = action.payload;
           state.resultsDisabledMessage = null;
@@ -167,10 +170,6 @@ const examSlice = createSlice({
           state.results = [];
           state.resultsDisabledMessage = action.payload.message;
         }
-      })
-      })
-      .addCase(deleteExam.fulfilled, (state, action) => {
-        state.myExams = state.myExams.filter((e) => e._id !== action.payload);
       })
       .addCase(setResourceLink.fulfilled, (state, action) => {
         state.currentExam = action.payload;
