@@ -5,6 +5,7 @@ import { useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   fetchExamById, updateExamSettings, publishExam, deleteQuestion, updateQuestion,
+  setResourceLink, uploadResourcePdf, removeResource,
 } from '../../features/exam/examSlice';
 
 export default function ExamEditor() {
@@ -13,7 +14,9 @@ export default function ExamEditor() {
   const { currentExam, questions, shareLink } = useSelector((s) => s.exam);
   const [settings, setSettings] = useState(null);
   const [accessCode, setAccessCode] = useState('');
-  const [editingQ, setEditingQ] = useState(null); // যে প্রশ্নটা এডিট মোডে আছে
+  const [editingQ, setEditingQ] = useState(null);
+  const [resourceLinkInput, setResourceLinkInput] = useState('');
+  const [resourcePdfFile, setResourcePdfFile] = useState(null);
 
   useEffect(() => { dispatch(fetchExamById(id)); }, [dispatch, id]);
 
@@ -21,6 +24,7 @@ export default function ExamEditor() {
     if (currentExam) {
       setSettings(currentExam.settings);
       setAccessCode(currentExam.accessCode || '');
+      setResourceLinkInput(currentExam.resource?.kind === 'link' ? currentExam.resource.link : '');
     }
   }, [currentExam]);
 
@@ -33,6 +37,25 @@ export default function ExamEditor() {
   const handlePublish = async () => {
     await saveSettings();
     dispatch(publishExam(id));
+  };
+
+  const handleSaveLink = () => {
+    if (!resourceLinkInput.trim()) return;
+    dispatch(setResourceLink({ id, link: resourceLinkInput.trim() }));
+  };
+
+  const handleUploadPdf = () => {
+    if (!resourcePdfFile) return;
+    const formData = new FormData();
+    formData.append('pdf', resourcePdfFile);
+    dispatch(uploadResourcePdf({ id, formData }));
+    setResourcePdfFile(null);
+  };
+
+  const handleRemoveResource = () => {
+    dispatch(removeResource(id));
+    setResourceLinkInput('');
+    setResourcePdfFile(null);
   };
 
   return (
@@ -109,6 +132,43 @@ export default function ExamEditor() {
             শেয়ারযোগ্য লিংক: <strong>{shareLink || `${window.location.origin}/join/${currentExam.examCode}`}</strong>
           </div>
         )}
+      </div>
+
+      {/* ---------- পরীক্ষা শেষে স্টুডেন্টকে দেখানোর রিসোর্স (লিংক অথবা PDF) ---------- */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow space-y-4">
+        <h2 className="font-semibold text-lg dark:text-white">পরীক্ষা শেষে স্টুডেন্টকে যা দেখাবে (ঐচ্ছিক)</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Google Drive লিংক অথবা একটা PDF ফাইল — যেকোনো একটা দাও। পরীক্ষা জমা দেয়ার পর স্টুডেন্ট রেজাল্ট পেজে এটা দেখতে পাবে।
+        </p>
+
+        {currentExam.resource?.kind && (
+          <div className="bg-primary-50 dark:bg-gray-700 p-3 rounded-lg text-sm dark:text-white flex justify-between items-center">
+            {currentExam.resource.kind === 'link' ? (
+              <span>বর্তমানে সেট করা আছে: লিংক — <span className="break-all">{currentExam.resource.link}</span></span>
+            ) : (
+              <span>বর্তমানে সেট করা আছে: PDF — {currentExam.resource.pdfOriginalName}</span>
+            )}
+            <button onClick={handleRemoveResource} className="text-red-600 font-medium ml-3 shrink-0">সরাও</button>
+          </div>
+        )}
+
+        <div className="grid sm:grid-cols-2 gap-4">
+          <Field label="Google Drive (বা অন্য) লিংক">
+            <div className="flex gap-2">
+              <input value={resourceLinkInput} onChange={(e) => setResourceLinkInput(e.target.value)}
+                className="input" placeholder="https://drive.google.com/..." />
+              <button onClick={handleSaveLink} className="bg-primary-600 text-white px-3 rounded-lg text-sm shrink-0">সেভ</button>
+            </div>
+          </Field>
+          <Field label="অথবা PDF আপলোড করো">
+            <div className="flex gap-2">
+              <input type="file" accept="application/pdf"
+                onChange={(e) => setResourcePdfFile(e.target.files[0])}
+                className="input" />
+              <button onClick={handleUploadPdf} className="bg-primary-600 text-white px-3 rounded-lg text-sm shrink-0">আপলোড</button>
+            </div>
+          </Field>
+        </div>
       </div>
 
       {/* ---------- প্রশ্ন তালিকা (Edit/Delete) ---------- */}
