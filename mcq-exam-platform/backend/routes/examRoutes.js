@@ -16,6 +16,7 @@ router.get('/', ctrl.getMyExams);
 router.get('/:id', ctrl.getExamById);
 router.put('/:id/settings', ctrl.updateExamSettings);
 router.post('/:id/publish', ctrl.publishExam);
+router.delete('/:id', ctrl.deleteExam);
 router.post('/:id/questions', ctrl.addQuestion);
 router.put('/:id/questions/reorder', ctrl.reorderQuestions);
 router.put('/questions/:questionId', ctrl.updateQuestion);
