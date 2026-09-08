@@ -23,20 +23,29 @@ exports.joinExam = async (req, res) => {
     const { examCode, studentName, studentRoll, studentPhone, accessCode } = req.body;
 
     const exam = await Exam.findOne({ examCode });
-    if (!exam || exam.status !== 'published')
-      return res.status(400).json({ message: 'পরীক্ষাটি খুঁজে পাওয়া যায়নি বা চালু নেই' });
-
-    if (exam.accessCode && exam.accessCode !== accessCode)
+       if (exam.accessCode && exam.accessCode !== accessCode)
       return res.status(401).json({ message: 'ভুল Access Code' });
 
-    // আগে থেকেই Submit করা থাকলে আবার দেয়া যাবে না
-    const existing = await Attempt.findOne({ exam: exam._id, studentRoll });
-    if (existing && existing.status === 'submitted') {
-      return res.status(400).json({ message: 'তুমি ইতিমধ্যে এই পরীক্ষা জমা দিয়েছো' });
+    const allowRepetition = exam.settings.allowRepetition;
+
+    if (!allowRepetition) {
+      // আগে থেকেই Submit করা থাকলে আবার দেয়া যাবে না
+      const existing = await Attempt.findOne({ exam: exam._id, studentRoll });
+      if (existing && existing.status === 'submitted') {
+        return res.status(400).json({ message: 'তুমি ইতিমধ্যে এই পরীক্ষা জমা দিয়েছো' });
+      }
+      if (existing && existing.status === 'in-progress') {
+        const questions = await Question.find({ _id: { $in: existing.questionOrder } });
+        return res.json(buildStudentExamPayload(exam, existing, questions));
+      }
+    } else {
+      // Repetition অন থাকলে চলমান কোনো এটেম্পট থাকলে সেটা রিজিউম করাও, নাহলে নতুন করে শুরু করতে দাও
+      const existingInProgress = await Attempt.findOne({ exam: exam._id, studentRoll, status: 'in-progress' });
+      if (existingInProgress) {
+        const questions = await Question.find({ _id: { $in: existingInProgress.questionOrder } });
+        return res.json(buildStudentExamPayload(exam, existingInProgress, questions));
+      }
     }
-    if (existing && existing.status === 'in-progress') {
-      const questions = await Question.find({ _id: { $in: existing.questionOrder } });
-      return res.json(buildStudentExamPayload(exam, existing, questions));
     }
 
     let questions = await Question.find({ exam: exam._id }).sort({ order: 1 });
