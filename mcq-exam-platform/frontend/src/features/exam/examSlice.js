@@ -2,7 +2,14 @@
 // Teacher সাইডের Exam CRUD, সেটিংস, রেজাল্ট ম্যানেজ করার slice
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axiosClient from '../../api/axiosClient';
-
+export const deleteExam = createAsyncThunk('exam/deleteExam', async (examId, { rejectWithValue }) => {
+  try {
+    await axiosClient.delete(`/exams/${examId}`);
+    return examId;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || 'ডিলিট ব্যর্থ হয়েছে');
+  }
+});
 export const uploadExamPdf = createAsyncThunk('exam/uploadPdf', async (formData, { rejectWithValue }) => {
   try {
     const { data } = await axiosClient.post('/exams/upload', formData, {
@@ -122,6 +129,9 @@ const examSlice = createSlice({
       })
       .addCase(fetchExamResults.fulfilled, (state, action) => {
         state.results = action.payload;
+      })
+      .addCase(deleteExam.fulfilled, (state, action) => {
+        state.myExams = state.myExams.filter((e) => e._id !== action.payload);
       })
       .addCase(deleteQuestion.fulfilled, (state, action) => {
         state.questions = state.questions.filter((q) => q._id !== action.payload);
