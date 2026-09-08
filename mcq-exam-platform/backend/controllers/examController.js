@@ -210,4 +210,111 @@ exports.deleteExam = async (req, res) => {
 
   await exam.deleteOne();
   res.json({ message: 'পরীক্ষাটি ডিলিট হয়েছে' });
+};
+// ---------- রেজাল্ট পেজে দেখানোর জন্য অতিরিক্ত রিসোর্স (Google Drive লিংক বা PDF) সেট করা ----------
+// শিক্ষক দুটার যেকোনো একটা দিলেই হবে — নতুন একটা সেট করলে আগেরটা মুছে যাবে
+exports.setResourceLink = async (req, res) => {
+  const exam = await Exam.findById(req.params.id);
+  if (!exam) return res.status(404).json({ message: 'Exam পাওয়া যায়নি' });
+  if (exam.teacher.toString() !== req.user.id)
+    return res.status(403).json({ message: 'অনুমতি নেই' });
+
+  const { link } = req.body;
+  if (!link) return res.status(400).json({ message: 'লিংক আবশ্যক' });
+
+  if (exam.resource?.pdfPath && fs.existsSync(exam.resource.pdfPath)) {
+    fs.unlink(exam.resource.pdfPath, () => {});
+  }
+
+  exam.resource = { kind: 'link', link, pdfPath: undefined, pdfOriginalName: undefined };
+  await exam.save();
+  res.json(exam);
+};
+
+exports.setResourcePdf = async (req, res) => {
+  const exam = await Exam.findById(req.params.id);
+  if (!exam) return res.status(404).json({ message: 'Exam পাওয়া যায়নি' });
+  if (exam.teacher.toString() !== req.user.id)
+    return res.status(403).json({ message: 'অনুমতি নেই' });
+  if (!req.file) return res.status(400).json({ message: 'PDF ফাইল আবশ্যক' });
+
+  if (exam.resource?.pdfPath && fs.existsSync(exam.resource.pdfPath)) {
+    fs.unlink(exam.resource.pdfPath, () => {});
+  }
+
+  exam.resource = {
+    kind: 'pdf',
+    pdfPath: req.file.path,
+    pdfOriginalName: req.file.originalname,
+    link: undefined,
+  };
+  await exam.save();
+  res.json(exam);
+};
+
+exports.removeResource = async (req, res) => {
+  const exam = await Exam.findById(req.params.id);
+  if (!exam) return res.status(404).json({ message: 'Exam পাওয়া যায়নি' });
+  if (exam.teacher.toString() !== req.user.id)
+    return res.status(403).json({ message: 'অনুমতি নেই' });
+
+  if (exam.resource?.pdfPath && fs.existsSync(exam.resource.pdfPath)) {
+    fs.unlink(exam.resource.pdfPath, () => {});
+  }
+  exam.resource = { kind: null, link: undefined, pdfPath: undefined, pdfOriginalName: undefined };
+  await exam.save();
+  res.json(exam);
+};// ---------- রেজাল্ট পেজে দেখানোর জন্য অতিরিক্ত রিসোর্স (Google Drive লিংক বা PDF) সেট করা ----------
+// শিক্ষক দুটার যেকোনো একটা দিলেই হবে — নতুন একটা সেট করলে আগেরটা মুছে যাবে
+exports.setResourceLink = async (req, res) => {
+  const exam = await Exam.findById(req.params.id);
+  if (!exam) return res.status(404).json({ message: 'Exam পাওয়া যায়নি' });
+  if (exam.teacher.toString() !== req.user.id)
+    return res.status(403).json({ message: 'অনুমতি নেই' });
+
+  const { link } = req.body;
+  if (!link) return res.status(400).json({ message: 'লিংক আবশ্যক' });
+
+  if (exam.resource?.pdfPath && fs.existsSync(exam.resource.pdfPath)) {
+    fs.unlink(exam.resource.pdfPath, () => {});
+  }
+
+  exam.resource = { kind: 'link', link, pdfPath: undefined, pdfOriginalName: undefined };
+  await exam.save();
+  res.json(exam);
+};
+
+exports.setResourcePdf = async (req, res) => {
+  const exam = await Exam.findById(req.params.id);
+  if (!exam) return res.status(404).json({ message: 'Exam পাওয়া যায়নি' });
+  if (exam.teacher.toString() !== req.user.id)
+    return res.status(403).json({ message: 'অনুমতি নেই' });
+  if (!req.file) return res.status(400).json({ message: 'PDF ফাইল আবশ্যক' });
+
+  if (exam.resource?.pdfPath && fs.existsSync(exam.resource.pdfPath)) {
+    fs.unlink(exam.resource.pdfPath, () => {});
+  }
+
+  exam.resource = {
+    kind: 'pdf',
+    pdfPath: req.file.path,
+    pdfOriginalName: req.file.originalname,
+    link: undefined,
+  };
+  await exam.save();
+  res.json(exam);
+};
+
+exports.removeResource = async (req, res) => {
+  const exam = await Exam.findById(req.params.id);
+  if (!exam) return res.status(404).json({ message: 'Exam পাওয়া যায়নি' });
+  if (exam.teacher.toString() !== req.user.id)
+    return res.status(403).json({ message: 'অনুমতি নেই' });
+
+  if (exam.resource?.pdfPath && fs.existsSync(exam.resource.pdfPath)) {
+    fs.unlink(exam.resource.pdfPath, () => {});
+  }
+  exam.resource = { kind: null, link: undefined, pdfPath: undefined, pdfOriginalName: undefined };
+  await exam.save();
+  res.json(exam);
 };};
