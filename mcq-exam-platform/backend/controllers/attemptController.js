@@ -277,3 +277,39 @@ exports.downloadResourcePdf = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+// ---------- ৬. প্রশ্ন-ভিত্তিক বিস্তারিত রিভিউ (রেজাল্ট পেজে All/Correct/Wrong/Skipped ফিল্টারের জন্য) ----------
+exports.getAttemptReview = async (req, res) => {
+  try {
+    const attempt = await Attempt.findById(req.params.attemptId);
+    if (!attempt || attempt.status !== 'submitted')
+      return res.status(400).json({ message: 'পরীক্ষা এখনো জমা হয়নি' });
+
+    const exam = await Exam.findById(attempt.exam);
+    const questions = await Question.find({ _id: { $in: attempt.questionOrder } });
+    const qMap = {};
+    questions.forEach((q) => (qMap[q._id.toString()] = q));
+
+    const items = attempt.questionOrder.map((qId, idx) => {
+      const q = qMap[qId.toString()];
+      const ans = attempt.answers.find((a) => a.question.toString() === qId.toString());
+      const selectedOptionIndex =
+        ans && ans.selectedOptionIndex !== null && ans.selectedOptionIndex !== undefined
+          ? ans.selectedOptionIndex
+          : null;
+
+      return {
+        serial: idx + 1,
+        questionText: q.questionText,
+        options: q.options,
+        correctOptionIndex: q.correctOptionIndex,
+        selectedOptionIndex,
+        status: selectedOptionIndex === null ? 'skipped' : ans.isCorrect ? 'correct' : 'wrong',
+        explanation: q.explanation || null,
+      };
+    });
+
+    res.json({ examTitle: exam.title, items });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
