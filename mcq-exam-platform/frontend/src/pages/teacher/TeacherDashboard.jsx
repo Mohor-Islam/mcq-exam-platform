@@ -1,8 +1,9 @@
 // ================== pages/teacher/TeacherDashboard.jsx ==================
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
-import { fetchMyExams } from '../../features/exam/examSlice';
+import { useEffect } from 'react';
+import { fetchMyExams, deleteExam } from '../../features/exam/examSlice';
 
 const statusColor = { draft: 'bg-gray-200 text-gray-700', published: 'bg-green-100 text-green-700', closed: 'bg-red-100 text-red-700' };
 
@@ -12,6 +13,13 @@ export default function TeacherDashboard() {
   const { user } = useSelector((s) => s.auth);
 
   useEffect(() => { dispatch(fetchMyExams()); }, [dispatch]);
+
+  const handleDelete = (exam) => {
+    const confirmed = window.confirm(`"${exam.title}" পরীক্ষাটি স্থায়ীভাবে ডিলিট করতে চাও? এর সাথে সব প্রশ্ন ও স্টুডেন্ট রেজাল্টও মুছে যাবে। এটা আর ফিরিয়ে আনা যাবে না।`);
+    if (confirmed) {
+      dispatch(deleteExam(exam._id));
+    }
+  };
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
@@ -35,9 +43,10 @@ export default function TeacherDashboard() {
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                 সময়: {exam.settings.totalTimeMinutes} মিনিট | মার্কস/প্রশ্ন: {exam.settings.marksPerQuestion}
               </p>
-              <div className="flex gap-3 mt-4 text-sm">
+              <div className="flex gap-3 mt-4 text-sm items-center">
                 <Link to={`/teacher/exam/${exam._id}`} className="text-primary-600 font-medium">এডিট / সেটিংস</Link>
                 <Link to={`/teacher/exam/${exam._id}/results`} className="text-primary-600 font-medium">রেজাল্ট</Link>
+                <button onClick={() => handleDelete(exam)} className="text-red-600 font-medium ml-auto">ডিলিট</button>
               </div>
             </div>
           ))}
