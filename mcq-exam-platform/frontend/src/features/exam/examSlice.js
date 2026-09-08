@@ -3,256 +3,130 @@ import axios from 'axios';
 
 const API_URL = '/api/exams';
 
-// ================== Basic Thunks ==================
-export const fetchExams = createAsyncThunk(
-  'exam/fetchExams',
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await axios.get(API_URL);
-      return response.data;
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to fetch exams');
-    }
-  }
-);
+// ================== FETCH ==================
+export const fetchExams = createAsyncThunk('exam/fetchExams', async (_, { rejectWithValue }) => {
+  try { const res = await axios.get(API_URL); return res.data; }
+  catch (e) { return rejectWithValue(e.response?.data?.message || 'Failed'); }
+});
 
-// TeacherDashboard এর জন্য alias - এটাই main fix
-export const fetchMyExams = createAsyncThunk(
-  'exam/fetchMyExams',
-  async (_, { rejectWithValue }) => {
-    try {
-      // তোমার backend যদি /my-exams হয়, তাহলে নিচের লাইন change করো
-      const response = await axios.get(`${API_URL}/my`);
-      return response.data;
-    } catch (error) {
-      // fallback - যদি /my route না থাকে, সব exam-ই return করবে
-      try {
-        const res2 = await axios.get(API_URL);
-        return res2.data;
-      } catch {
-        return rejectWithValue(error.response?.data?.message || 'Failed to fetch my exams');
-      }
-    }
+export const fetchMyExams = createAsyncThunk('exam/fetchMyExams', async (_, { rejectWithValue }) => {
+  try { const res = await axios.get(`${API_URL}/my`); return res.data; }
+  catch (e) {
+    try { const res2 = await axios.get(API_URL); return res2.data; }
+    catch { return rejectWithValue(e.response?.data?.message || 'Failed'); }
   }
-);
+});
 
-export const fetchExamById = createAsyncThunk(
-  'exam/fetchExamById',
-  async (id, { rejectWithValue }) => {
-    try {
-      const response = await axios.get(`${API_URL}/${id}`);
-      return response.data;
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to fetch exam');
-    }
-  }
-);
+export const fetchExamById = createAsyncThunk('exam/fetchExamById', async (id, { rejectWithValue }) => {
+  try { const res = await axios.get(`${API_URL}/${id}`); return res.data; }
+  catch (e) { return rejectWithValue(e.response?.data?.message || 'Failed'); }
+});
 
-export const createExam = createAsyncThunk(
-  'exam/createExam',
-  async (examData, { rejectWithValue }) => {
-    try {
-      const response = await axios.post(API_URL, examData);
-      return response.data;
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to create exam');
-    }
-  }
-);
+// ================== CRUD ==================
+export const createExam = createAsyncThunk('exam/createExam', async (examData, { rejectWithValue }) => {
+  try { const res = await axios.post(API_URL, examData); return res.data; }
+  catch (e) { return rejectWithValue(e.response?.data?.message || 'Failed'); }
+});
 
-export const updateExam = createAsyncThunk(
-  'exam/updateExam',
-  async ({ id, examData }, { rejectWithValue }) => {
-    try {
-      const response = await axios.put(`${API_URL}/${id}`, examData);
-      return response.data;
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to update exam');
-    }
-  }
-);
+export const updateExam = createAsyncThunk('exam/updateExam', async ({ id, examData }, { rejectWithValue }) => {
+  try { const res = await axios.put(`${API_URL}/${id}`, examData); return res.data; }
+  catch (e) { return rejectWithValue(e.response?.data?.message || 'Failed'); }
+});
 
-export const deleteExam = createAsyncThunk(
-  'exam/deleteExam',
-  async (id, { rejectWithValue }) => {
-    try {
-      await axios.delete(`${API_URL}/${id}`);
-      return id;
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to delete exam');
-    }
-  }
-);
+export const deleteExam = createAsyncThunk('exam/deleteExam', async (id, { rejectWithValue }) => {
+  try { await axios.delete(`${API_URL}/${id}`); return id; }
+  catch (e) { return rejectWithValue(e.response?.data?.message || 'Failed'); }
+});
 
-// ================== ExamEditor এর জন্য নতুন Thunks ==================
-export const updateExamSettings = createAsyncThunk(
-  'exam/updateExamSettings',
-  async ({ id, payload }, { rejectWithValue }) => {
-    try {
-      const response = await axios.put(`${API_URL}/${id}`, payload);
-      return response.data;
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to update settings');
-    }
-  }
-);
+// ================== ExamEditor Needs ==================
+export const updateExamSettings = createAsyncThunk('exam/updateExamSettings', async ({ id, payload }, { rejectWithValue }) => {
+  try { const res = await axios.put(`${API_URL}/${id}`, payload); return res.data; }
+  catch (e) { return rejectWithValue(e.response?.data?.message || 'Failed'); }
+});
 
-export const publishExam = createAsyncThunk(
-  'exam/publishExam',
-  async (id, { rejectWithValue }) => {
-    try {
-      const response = await axios.post(`${API_URL}/${id}/publish`);
-      return response.data;
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to publish');
-    }
-  }
-);
+export const publishExam = createAsyncThunk('exam/publishExam', async (id, { rejectWithValue }) => {
+  try { const res = await axios.post(`${API_URL}/${id}/publish`); return res.data; }
+  catch (e) { return rejectWithValue(e.response?.data?.message || 'Failed'); }
+});
 
-export const setResourceLink = createAsyncThunk(
-  'exam/setResourceLink',
-  async ({ id, link }, { rejectWithValue }) => {
-    try {
-      const response = await axios.put(`${API_URL}/${id}/resource`, { link });
-      return response.data;
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to set link');
-    }
-  }
-);
+export const setResourceLink = createAsyncThunk('exam/setResourceLink', async ({ id, link }, { rejectWithValue }) => {
+  try { const res = await axios.put(`${API_URL}/${id}/resource`, { link }); return res.data; }
+  catch (e) { return rejectWithValue(e.response?.data?.message || 'Failed'); }
+});
 
-export const uploadResourcePdf = createAsyncThunk(
-  'exam/uploadResourcePdf',
-  async ({ id, formData }, { rejectWithValue }) => {
-    try {
-      const response = await axios.post(`${API_URL}/${id}/resource/pdf`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      return response.data;
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to upload pdf');
-    }
-  }
-);
+export const uploadResourcePdf = createAsyncThunk('exam/uploadResourcePdf', async ({ id, formData }, { rejectWithValue }) => {
+  try { const res = await axios.post(`${API_URL}/${id}/resource/pdf`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }); return res.data; }
+  catch (e) { return rejectWithValue(e.response?.data?.message || 'Failed'); }
+});
 
-export const removeResource = createAsyncThunk(
-  'exam/removeResource',
-  async (id, { rejectWithValue }) => {
-    try {
-      const response = await axios.delete(`${API_URL}/${id}/resource`);
-      return response.data;
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to remove resource');
-    }
-  }
-);
+export const removeResource = createAsyncThunk('exam/removeResource', async (id, { rejectWithValue }) => {
+  try { const res = await axios.delete(`${API_URL}/${id}/resource`); return res.data; }
+  catch (e) { return rejectWithValue(e.response?.data?.message || 'Failed'); }
+});
 
-// Questions
-export const addQuestion = createAsyncThunk(
-  'exam/addQuestion',
-  async ({ examId, questionData }, { rejectWithValue }) => {
-    try {
-      const response = await axios.post(`${API_URL}/${examId}/questions`, questionData);
-      return response.data;
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to add question');
-    }
-  }
-);
+// ================== UploadExam.jsx Needs - এটাই এখন error দিচ্ছে ==================
+export const uploadExamPdf = createAsyncThunk('exam/uploadExamPdf', async (formData, { rejectWithValue }) => {
+  try {
+    // তোমার UploadExam.jsx যদি FormData পাঠায়
+    const payload = formData instanceof FormData? formData : (() => { const fd = new FormData(); Object.entries(formData).forEach(([k,v])=>fd.append(k,v)); return fd; })();
+    const res = await axios.post(`${API_URL}/upload/pdf`, payload, { headers: { 'Content-Type': 'multipart/form-data' } });
+    return res.data;
+  } catch (e) { return rejectWithValue(e.response?.data?.message || 'Failed to upload exam pdf'); }
+});
 
-// ExamEditor.jsx তোমার call করছে {questionId, payload} দিয়ে
-export const updateQuestion = createAsyncThunk(
-  'exam/updateQuestion',
-  async ({ questionId, payload, examId, questionData }, { rejectWithValue }) => {
-    try {
-      const finalId = questionId || payload?._id;
-      const finalData = payload || questionData;
-      // backend যদি /questions/:id হয়
-      const url = examId? `${API_URL}/${examId}/questions/${questionId}` : `${API_URL}/questions/${questionId}`;
-      const response = await axios.put(url, finalData);
-      return response.data;
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to update question');
-    }
-  }
-);
+// যাতে পুরনো নামেও কাজ করে
+export const uploadExam = uploadExamPdf;
 
-export const deleteQuestion = createAsyncThunk(
-  'exam/deleteQuestion',
-  async (questionIdOrObj, { rejectWithValue }) => {
-    try {
-      const qId = typeof questionIdOrObj === 'string'? questionIdOrObj : questionIdOrObj.questionId;
-      const examId = questionIdOrObj?.examId;
-      const url = examId? `${API_URL}/${examId}/questions/${qId}` : `${API_URL}/questions/${qId}`;
-      await axios.delete(url);
-      return qId;
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to delete question');
-    }
-  }
-);
+// ================== Questions ==================
+export const addQuestion = createAsyncThunk('exam/addQuestion', async ({ examId, questionData }, { rejectWithValue }) => {
+  try { const res = await axios.post(`${API_URL}/${examId}/questions`, questionData); return res.data; }
+  catch (e) { return rejectWithValue(e.response?.data?.message || 'Failed'); }
+});
 
-// Initial State
-const initialState = {
-  exams: [],
-  currentExam: null,
-  questions: [],
-  shareLink: null,
-  loading: false,
-  error: null,
-};
+export const updateQuestion = createAsyncThunk('exam/updateQuestion', async (arg, { rejectWithValue }) => {
+  try {
+    const qId = arg.questionId || arg._id;
+    const data = arg.payload || arg.questionData;
+    const url = arg.examId? `${API_URL}/${arg.examId}/questions/${qId}` : `${API_URL}/questions/${qId}`;
+    const res = await axios.put(url, data); return res.data;
+  } catch (e) { return rejectWithValue(e.response?.data?.message || 'Failed'); }
+});
+
+export const deleteQuestion = createAsyncThunk('exam/deleteQuestion', async (arg, { rejectWithValue }) => {
+  try {
+    const qId = typeof arg === 'string'? arg : arg.questionId;
+    const url = arg?.examId? `${API_URL}/${arg.examId}/questions/${qId}` : `${API_URL}/questions/${qId}`;
+    await axios.delete(url); return qId;
+  } catch (e) { return rejectWithValue(e.response?.data?.message || 'Failed'); }
+});
+
+const initialState = { exams: [], currentExam: null, questions: [], shareLink: null, loading: false, error: null };
 
 const examSlice = createSlice({
   name: 'exam',
   initialState,
   reducers: {
-    clearCurrentExam: (state) => {
-      state.currentExam = null;
-      state.questions = [];
-      state.shareLink = null;
-    },
-    clearError: (state) => {
-      state.error = null;
-    },
+    clearCurrentExam: (state) => { state.currentExam = null; state.questions = []; state.shareLink = null; },
+    clearError: (state) => { state.error = null; },
   },
   extraReducers: (builder) => {
     builder
-     .addCase(fetchExams.pending, (state) => { state.loading = true; state.error = null; })
-     .addCase(fetchExams.fulfilled, (state, action) => { state.loading = false; state.exams = action.payload; })
-     .addCase(fetchMyExams.pending, (state) => { state.loading = true; })
-     .addCase(fetchMyExams.fulfilled, (state, action) => { state.loading = false; state.exams = action.payload; })
-     .addCase(fetchExamById.pending, (state) => { state.loading = true; state.error = null; })
-     .addCase(fetchExamById.fulfilled, (state, action) => {
-        state.loading = false;
-        state.currentExam = action.payload.exam || action.payload;
-        state.questions = action.payload.questions || action.payload.exam?.questions || [];
-        state.shareLink = action.payload.shareLink || null;
-      })
-     .addCase(createExam.fulfilled, (state, action) => { state.exams.push(action.payload); })
-     .addCase(updateExam.fulfilled, (state, action) => {
-        const idx = state.exams.findIndex((e) => e._id === action.payload._id);
-        if (idx!== -1) state.exams[idx] = action.payload;
-        if (state.currentExam && state.currentExam._id === action.payload._id) state.currentExam = action.payload;
-      })
-     .addCase(deleteExam.fulfilled, (state, action) => { state.exams = state.exams.filter((e) => e._id!== action.payload); })
-     .addCase(updateExamSettings.fulfilled, (state, action) => { state.currentExam = action.payload.exam || action.payload; })
-     .addCase(publishExam.fulfilled, (state, action) => {
-        state.currentExam = action.payload.exam || action.payload;
-        state.shareLink = action.payload.shareLink || action.payload.link || state.shareLink;
-      })
-     .addCase(setResourceLink.fulfilled, (state, action) => { state.currentExam = action.payload.exam || action.payload; })
-     .addCase(uploadResourcePdf.fulfilled, (state, action) => { state.currentExam = action.payload.exam || action.payload; })
-     .addCase(removeResource.fulfilled, (state, action) => { state.currentExam = action.payload.exam || action.payload; })
-     .addCase(addQuestion.fulfilled, (state, action) => { state.questions.push(action.payload); })
-     .addCase(updateQuestion.fulfilled, (state, action) => {
-        const idx = state.questions.findIndex((q) => q._id === action.payload._id);
-        if (idx!== -1) state.questions[idx] = action.payload;
-      })
-     .addCase(deleteQuestion.fulfilled, (state, action) => { state.questions = state.questions.filter((q) => q._id!== action.payload); })
-     .addMatcher(
-        (action) => action.type.startsWith('exam/') && action.type.endsWith('/rejected'),
-        (state, action) => { state.loading = false; state.error = action.payload || 'An error occurred'; }
-      );
+     .addCase(fetchExams.fulfilled, (s,a)=>{s.exams=a.payload;})
+     .addCase(fetchMyExams.fulfilled, (s,a)=>{s.exams=a.payload;})
+     .addCase(fetchExamById.fulfilled, (s,a)=>{s.currentExam=a.payload.exam||a.payload; s.questions=a.payload.questions||a.payload.exam?.questions||[]; s.shareLink=a.payload.shareLink||null;})
+     .addCase(createExam.fulfilled, (s,a)=>{s.exams.push(a.payload);})
+     .addCase(updateExam.fulfilled, (s,a)=>{ const i=s.exams.findIndex(e=>e._id===a.payload._id); if(i!==-1)s.exams[i]=a.payload; })
+     .addCase(deleteExam.fulfilled, (s,a)=>{s.exams=s.exams.filter(e=>e._id!==a.payload);})
+     .addCase(updateExamSettings.fulfilled, (s,a)=>{s.currentExam=a.payload.exam||a.payload;})
+     .addCase(publishExam.fulfilled, (s,a)=>{s.currentExam=a.payload.exam||a.payload; s.shareLink=a.payload.shareLink||a.payload.link||s.shareLink;})
+     .addCase(setResourceLink.fulfilled, (s,a)=>{s.currentExam=a.payload.exam||a.payload;})
+     .addCase(uploadResourcePdf.fulfilled, (s,a)=>{s.currentExam=a.payload.exam||a.payload;})
+     .addCase(removeResource.fulfilled, (s,a)=>{s.currentExam=a.payload.exam||a.payload;})
+     .addCase(uploadExamPdf.fulfilled, (s,a)=>{if(a.payload.exam) s.exams.push(a.payload.exam);})
+     .addCase(addQuestion.fulfilled, (s,a)=>{s.questions.push(a.payload);})
+     .addCase(updateQuestion.fulfilled, (s,a)=>{const i=s.questions.findIndex(q=>q._id===a.payload._id); if(i!==-1)s.questions[i]=a.payload;})
+     .addCase(deleteQuestion.fulfilled, (s,a)=>{s.questions=s.questions.filter(q=>q._id!==a.payload);})
+     .addMatcher(a=>a.type.startsWith('exam/')&&a.type.endsWith('/rejected'), (s,a)=>{s.loading=false; s.error=a.payload;});
   },
 });
 
