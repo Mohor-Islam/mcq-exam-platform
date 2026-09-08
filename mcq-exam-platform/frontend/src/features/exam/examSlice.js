@@ -3,17 +3,15 @@ import axios from 'axios';
 
 const API_URL = '/api/exams';
 
-// ================== Fetch ==================
+// ================== FETCH ==================
 export const fetchExams = createAsyncThunk('exam/fetchExams', async (_, { rejectWithValue }) => {
   try { const r = await axios.get(API_URL); return r.data; }
   catch (e) { return rejectWithValue(e.response?.data?.message || 'Failed'); }
 });
 
 export const fetchMyExams = createAsyncThunk('exam/fetchMyExams', async (_, { rejectWithValue }) => {
-  try {
-    const r = await axios.get(`${API_URL}/my`);
-    return r.data;
-  } catch (e) {
+  try { const r = await axios.get(`${API_URL}/my`); return r.data; }
+  catch (e) {
     try { const r2 = await axios.get(API_URL); return r2.data; }
     catch { return rejectWithValue(e.response?.data?.message || 'Failed'); }
   }
@@ -24,24 +22,24 @@ export const fetchExamById = createAsyncThunk('exam/fetchExamById', async (id, {
   catch (e) { return rejectWithValue(e.response?.data?.message || 'Failed'); }
 });
 
-// ================== Create / Upload ==================
+// ================== Create / Upload (UploadExam.jsx এর জন্য) ==================
 export const createExam = createAsyncThunk('exam/createExam', async (data, { rejectWithValue }) => {
   try { const r = await axios.post(API_URL, data); return r.data; }
   catch (e) { return rejectWithValue(e.response?.data?.message || 'Failed'); }
 });
 
-// এইটাই তোমার error এর কারণ - আগে ছিল না
-export const uploadExamPdf = createAsyncThunk('exam/uploadExamPdf', async (formData, { rejectWithValue }) => {
+// FIX: UploadExam.jsx সরাসরি FormData পাঠায়
+export const uploadExamPdf = createAsyncThunk('exam/uploadExamPdf', async (formDataArg, { rejectWithValue }) => {
   try {
-    const r = await axios.post(`${API_URL}/upload`, formData, {
+    const fd = formDataArg instanceof FormData? formDataArg : formDataArg.formData || formDataArg;
+    const r = await axios.post(`${API_URL}/upload`, fd, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return r.data;
   } catch (e) { return rejectWithValue(e.response?.data?.message || 'PDF upload failed'); }
 });
 
-// alias রাখলাম, যদি কোথাও uploadExam নামে use করো
-export const uploadExam = uploadExamPdf;
+export const uploadExam = uploadExamPdf; // alias
 
 export const updateExam = createAsyncThunk('exam/updateExam', async ({ id, examData }, { rejectWithValue }) => {
   try { const r = await axios.put(`${API_URL}/${id}`, examData); return r.data; }
@@ -53,7 +51,7 @@ export const deleteExam = createAsyncThunk('exam/deleteExam', async (id, { rejec
   catch (e) { return rejectWithValue(e.response?.data?.message || 'Failed'); }
 });
 
-// ================== Settings / Publish / Resource ==================
+// ================== ExamEditor.jsx এর জন্য ==================
 export const updateExamSettings = createAsyncThunk('exam/updateExamSettings', async ({ id, payload }, { rejectWithValue }) => {
   try { const r = await axios.put(`${API_URL}/${id}`, payload); return r.data; }
   catch (e) { return rejectWithValue(e.response?.data?.message || 'Failed'); }
@@ -70,12 +68,8 @@ export const setResourceLink = createAsyncThunk('exam/setResourceLink', async ({
 });
 
 export const uploadResourcePdf = createAsyncThunk('exam/uploadResourcePdf', async ({ id, formData }, { rejectWithValue }) => {
-  try {
-    const r = await axios.post(`${API_URL}/${id}/resource/pdf`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-    return r.data;
-  } catch (e) { return rejectWithValue(e.response?.data?.message || 'Failed'); }
+  try { const r = await axios.post(`${API_URL}/${id}/resource/pdf`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }); return r.data; }
+  catch (e) { return rejectWithValue(e.response?.data?.message || 'Failed'); }
 });
 
 export const removeResource = createAsyncThunk('exam/removeResource', async (id, { rejectWithValue }) => {
@@ -89,22 +83,15 @@ export const addQuestion = createAsyncThunk('exam/addQuestion', async ({ examId,
   catch (e) { return rejectWithValue(e.response?.data?.message || 'Failed'); }
 });
 
-export const updateQuestion = createAsyncThunk('exam/updateQuestion', async ({ questionId, payload, examId, questionData }, { rejectWithValue }) => {
-  try {
-    const qId = questionId;
-    const data = payload || questionData;
-    const url = examId? `${API_URL}/${examId}/questions/${qId}` : `${API_URL}/questions/${qId}`;
-    const r = await axios.put(url, data);
-    return r.data;
-  } catch (e) { return rejectWithValue(e.response?.data?.message || 'Failed'); }
+export const updateQuestion = createAsyncThunk('exam/updateQuestion', async ({ questionId, payload }, { rejectWithValue }) => {
+  try { const r = await axios.put(`${API_URL}/questions/${questionId}`, payload); return r.data; }
+  catch (e) { return rejectWithValue(e.response?.data?.message || 'Failed'); }
 });
 
 export const deleteQuestion = createAsyncThunk('exam/deleteQuestion', async (arg, { rejectWithValue }) => {
   try {
-    const qId = typeof arg === 'string'? arg : arg.questionId;
-    const examId = arg?.examId;
-    const url = examId? `${API_URL}/${examId}/questions/${qId}` : `${API_URL}/questions/${qId}`;
-    await axios.delete(url);
+    const qId = typeof arg === 'string'? arg : arg.questionId || arg._id;
+    await axios.delete(`${API_URL}/questions/${qId}`);
     return qId;
   } catch (e) { return rejectWithValue(e.response?.data?.message || 'Failed'); }
 });
@@ -119,36 +106,23 @@ const examSlice = createSlice({
     clearError: (s) => { s.error = null; },
   },
   extraReducers: (b) => {
-    b.addCase(fetchExams.fulfilled, (s, a) => { s.exams = a.payload; })
-    .addCase(fetchMyExams.fulfilled, (s, a) => { s.exams = a.payload; })
-    .addCase(fetchExamById.fulfilled, (s, a) => {
-        s.currentExam = a.payload.exam || a.payload;
-        s.questions = a.payload.questions || a.payload.exam?.questions || [];
-        s.shareLink = a.payload.shareLink || null;
-     })
-    .addCase(createExam.fulfilled, (s, a) => { s.exams.push(a.payload); })
-    .addCase(uploadExamPdf.fulfilled, (s, a) => {
-        if(a.payload.exam) s.exams.push(a.payload.exam);
-        else if(a.payload._id) s.exams.push(a.payload);
-     })
-    .addCase(updateExamSettings.fulfilled, (s, a) => { s.currentExam = a.payload.exam || a.payload; })
-    .addCase(publishExam.fulfilled, (s, a) => {
-        s.currentExam = a.payload.exam || a.payload;
-        s.shareLink = a.payload.shareLink || a.payload.link || s.shareLink;
-     })
-    .addCase(deleteExam.fulfilled, (s, a) => { s.exams = s.exams.filter((e) => e._id!== a.payload); })
-    .addCase(setResourceLink.fulfilled, (s, a) => { s.currentExam = a.payload.exam || a.payload; })
-    .addCase(uploadResourcePdf.fulfilled, (s, a) => { s.currentExam = a.payload.exam || a.payload; })
-    .addCase(removeResource.fulfilled, (s, a) => { s.currentExam = a.payload.exam || a.payload; })
-    .addCase(addQuestion.fulfilled, (s, a) => { s.questions.push(a.payload); })
-    .addCase(updateQuestion.fulfilled, (s, a) => {
-        const i = s.questions.findIndex((q) => q._id === a.payload._id);
-        if (i!== -1) s.questions[i] = a.payload;
-     })
-    .addCase(deleteQuestion.fulfilled, (s, a) => { s.questions = s.questions.filter((q) => q._id!== a.payload); })
-    .addMatcher((ac) => ac.type.startsWith('exam/') && ac.type.endsWith('/rejected'), (s, ac) => { s.loading = false; s.error = ac.payload; })
-    .addMatcher((ac) => ac.type.startsWith('exam/') && ac.type.endsWith('/pending'), (s) => { s.loading = true; s.error = null; })
-    .addMatcher((ac) => ac.type.startsWith('exam/') && ac.type.endsWith('/fulfilled'), (s) => { s.loading = false; });
+    b.addCase(fetchExams.fulfilled, (s,a)=>{s.exams=a.payload;})
+    .addCase(fetchMyExams.fulfilled, (s,a)=>{s.exams=a.payload;})
+    .addCase(fetchExamById.fulfilled, (s,a)=>{s.currentExam=a.payload.exam||a.payload; s.questions=a.payload.questions||a.payload.exam?.questions||[]; s.shareLink=a.payload.shareLink||null;})
+    .addCase(createExam.fulfilled, (s,a)=>{s.exams.push(a.payload.exam||a.payload);})
+    .addCase(uploadExamPdf.fulfilled, (s,a)=>{const ex=a.payload.exam||a.payload; if(ex?._id) s.exams.push(ex);})
+    .addCase(updateExamSettings.fulfilled, (s,a)=>{s.currentExam=a.payload.exam||a.payload;})
+    .addCase(publishExam.fulfilled, (s,a)=>{s.currentExam=a.payload.exam||a.payload; s.shareLink=a.payload.shareLink||a.payload.link||s.shareLink;})
+    .addCase(deleteExam.fulfilled, (s,a)=>{s.exams=s.exams.filter(e=>e._id!==a.payload);})
+    .addCase(setResourceLink.fulfilled, (s,a)=>{s.currentExam=a.payload.exam||a.payload;})
+    .addCase(uploadResourcePdf.fulfilled, (s,a)=>{s.currentExam=a.payload.exam||a.payload;})
+    .addCase(removeResource.fulfilled, (s,a)=>{s.currentExam=a.payload.exam||a.payload;})
+    .addCase(addQuestion.fulfilled, (s,a)=>{s.questions.push(a.payload);})
+    .addCase(updateQuestion.fulfilled, (s,a)=>{const i=s.questions.findIndex(q=>q._id===a.payload._id); if(i!==-1) s.questions[i]=a.payload;})
+    .addCase(deleteQuestion.fulfilled, (s,a)=>{s.questions=s.questions.filter(q=>q._id!==a.payload);})
+    .addMatcher(ac=>ac.type.endsWith('/pending'), s=>{s.loading=true; s.error=null;})
+    .addMatcher(ac=>ac.type.endsWith('/rejected'), (s,ac)=>{s.loading=false; s.error=ac.payload;})
+    .addMatcher(ac=>ac.type.endsWith('/fulfilled'), s=>{s.loading=false;});
   },
 });
 
