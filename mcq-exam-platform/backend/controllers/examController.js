@@ -148,7 +148,7 @@ exports.getExamResults = async (req, res) => {
   const attempts = await Attempt.find({ exam: exam._id }).sort({ obtainedMarks: -1 });
   res.json(attempts);
 };
-};
+// extra }; এখানে ছিল, ডিলিট করে দিলাম
 
 exports.getAttemptDetails = async (req, res) => {
   const attempt = await Attempt.findById(req.params.attemptId).populate('answers.question');
@@ -219,7 +219,7 @@ exports.deleteExam = async (req, res) => {
   res.json({ message: 'পরীক্ষাটি ডিলিট হয়েছে' });
 };
 
-// ---------- ১১. রেজাল্ট পেজে দেখানোর জন্য অতিরিক্ত রিসোর্স (Google Drive লিংক বা PDF) সেট করা ----------
+// ---------- ১. রেজাল্ট পেজে দেখানোর জন্য অতিরিক্ত রিসোর্স (Google Drive লিংক বা PDF) সেট করা ----------
 exports.setResourceLink = async (req, res) => {
   const exam = await Exam.findById(req.params.id);
   if (!exam) return res.status(404).json({ message: 'Exam পাওয়া যায়নি' });
