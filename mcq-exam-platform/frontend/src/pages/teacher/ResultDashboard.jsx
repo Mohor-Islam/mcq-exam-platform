@@ -8,7 +8,7 @@ import axiosClient from '../../api/axiosClient';
 export default function ResultDashboard() {
   const { id } = useParams();
   const dispatch = useDispatch();
-  const { results, currentExam } = useSelector((s) => s.exam);
+  const { results, currentExam, resultsDisabledMessage } = useSelector((s) => s.exam);
 
   useEffect(() => {
     dispatch(fetchExamById(id));
@@ -25,6 +25,17 @@ export default function ResultDashboard() {
     link.click();
     link.remove();
   };
+
+  if (resultsDisabledMessage) {
+    return (
+      <div className="max-w-5xl mx-auto px-4 py-8">
+        <h1 className="text-2xl font-bold dark:text-white mb-6">রেজাল্ট ড্যাশবোর্ড — {currentExam?.title}</h1>
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow text-center text-gray-500 dark:text-gray-400">
+          {resultsDisabledMessage}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
