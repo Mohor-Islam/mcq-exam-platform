@@ -1,21 +1,19 @@
-`controllers/examController.js` ফাইলটির প্রোডাকশন-রেডি এবং বাগ-ফ্রি কোড নিচে দেওয়া হলো।
-
-সবগুলো ফাংশনে `try...catch` ব্লক, ফাইল ক্লিনআপ (Garbage Cleanup) এবং প্রপার এরর হ্যান্ডলিং যুক্ত করা হয়েছে যাতে Vercel বা অন্য কোনো সার্ভারে আনহ্যান্ডেল্ড এক্সেপশন না ঘটে।
-
-```javascript
 // ================== controllers/examController.js ==================
 const fs = require('fs');
 const path = require('path');
-const { nanoid } = require('nanoid');
+const crypto = require('crypto'); // 💡 nanoid-এর ESM কনফ্লিক্ট এড়াতে Node.js বিল্ট-ইন crypto
 const Exam = require('../models/Exam');
 const Question = require('../models/Question');
 const Attempt = require('../models/Attempt');
 const { extractQuestionsFromPdf } = require('../utils/pdfParser');
 const { generateResultExcel } = require('../utils/excelExport');
 
+// 8 অক্ষরের ইউনিক এক্সাম কোড তৈরি করার হেলপার ফাংশন
+const generateExamCode = () => crypto.randomBytes(4).toString('hex');
+
 // হেলপার ফাংশন: সেফলি ফাইল ডিলিট করার জন্য
 const safeDeleteFile = (filePath) => {
-  if (filePath && fs.existsSync(filePath)) {
+  if (filePath && typeof filePath === 'string' && fs.existsSync(filePath)) {
     fs.unlink(filePath, (err) => {
       if (err) console.error(`File deletion error (${filePath}):`, err.message);
     });
@@ -31,20 +29,19 @@ exports.uploadExamPdf = async (req, res) => {
 
     const title = req.body.title || req.file.originalname.replace(/\.pdf$/i, '');
     
-    // PDF থেকে প্রশ্ন পার্স করা (File path অথবা Buffer হ্যান্ডেল করা)
+    // PDF থেকে প্রশ্ন পার্স করা (File path অথবা Buffer উভয়ই সাপোর্ট করবে)
     const pdfSource = req.file.path || req.file.buffer;
     const parsedQuestions = await extractQuestionsFromPdf(pdfSource);
 
     if (!parsedQuestions || parsedQuestions.length === 0) {
-      // পার্সিং ব্যর্থ হলে আপলোড করা ফাইল মুছে ফেলা
-      safeDeleteFile(req.file.path);
+      if (req.file.path) safeDeleteFile(req.file.path);
       return res.status(400).json({
         message:
           'PDF থেকে কোনো প্রশ্ন পার্স করা যায়নি। ফরম্যাট চেক করো: "1. প্রশ্ন? A. ... B. ... C. ... D. ... Answer: C"',
       });
     }
 
-    const examCode = nanoid(8);
+    const examCode = generateExamCode();
 
     const exam = await Exam.create({
       teacher: req.user.id,
@@ -190,7 +187,7 @@ exports.reorderQuestions = async (req, res) => {
   try {
     const { orderList } = req.body;
     if (!Array.isArray(orderList)) {
-      return res.status(400).json({ message: 'orderList অ্যারে হওয়া আবশ্যক' });
+      return res.status(400).json({ message: 'orderList অ্যারে হওয়া আবশ্যক' });
     }
 
     await Promise.all(
@@ -305,12 +302,9 @@ exports.deleteExam = async (req, res) => {
     await Question.deleteMany({ exam: exam._id });
     await Attempt.deleteMany({ exam: exam._id });
 
-    // মূল PDF ফাইল থাকলে ডিলিট করা
-    safeDeleteFile(exam.sourcePdfPath);
-    // রিসোর্স PDF থাকলে ডিলিট করা
-    if (exam.resource?.pdfPath) {
-      safeDeleteFile(exam.resource.pdfPath);
-    }
+    // ফাইল সেফলি ডিলিট
+    if (exam.sourcePdfPath) safeDeleteFile(exam.sourcePdfPath);
+    if (exam.resource?.pdfPath) safeDeleteFile(exam.resource.pdfPath);
 
     await exam.deleteOne();
     res.json({ message: 'পরীক্ষাটি সফলভাবে ডিলিট হয়েছে' });
@@ -331,10 +325,7 @@ exports.setResourceLink = async (req, res) => {
     const { link } = req.body;
     if (!link) return res.status(400).json({ message: 'লিংক আবশ্যক' });
 
-    // পুরোনো PDF ফাইল থাকলে রিমুভ করা
-    if (exam.resource?.pdfPath) {
-      safeDeleteFile(exam.resource.pdfPath);
-    }
+    if (exam.resource?.pdfPath) safeDeleteFile(exam.resource.pdfPath);
 
     exam.resource = { kind: 'link', link, pdfPath: undefined, pdfOriginalName: undefined };
     await exam.save();
@@ -353,10 +344,7 @@ exports.setResourcePdf = async (req, res) => {
     }
     if (!req.file) return res.status(400).json({ message: 'PDF ফাইল আবশ্যক' });
 
-    // পুরোনো PDF ফাইল থাকলে রিমুভ করা
-    if (exam.resource?.pdfPath) {
-      safeDeleteFile(exam.resource.pdfPath);
-    }
+    if (exam.resource?.pdfPath) safeDeleteFile(exam.resource.pdfPath);
 
     exam.resource = {
       kind: 'pdf',
@@ -380,9 +368,7 @@ exports.removeResource = async (req, res) => {
       return res.status(403).json({ message: 'অনুমতি নেই' });
     }
 
-    if (exam.resource?.pdfPath) {
-      safeDeleteFile(exam.resource.pdfPath);
-    }
+    if (exam.resource?.pdfPath) safeDeleteFile(exam.resource.pdfPath);
 
     exam.resource = { kind: null, link: undefined, pdfPath: undefined, pdfOriginalName: undefined };
     await exam.save();
@@ -391,5 +377,3 @@ exports.removeResource = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-
-```
