@@ -194,4 +194,20 @@ exports.getExamByCode = async (req, res) => {
     requiresAccessCode: !!exam.accessCode,
     totalTimeMinutes: exam.settings.totalTimeMinutes,
   });
-};
+// ---------- ১০. পুরো Exam ডিলিট করা (প্রশ্ন, রেজাল্ট ও PDF ফাইলসহ) ----------
+exports.deleteExam = async (req, res) => {
+  const exam = await Exam.findById(req.params.id);
+  if (!exam) return res.status(404).json({ message: 'Exam পাওয়া যায়নি' });
+  if (exam.teacher.toString() !== req.user.id)
+    return res.status(403).json({ message: 'অনুমতি নেই' });
+
+  await Question.deleteMany({ exam: exam._id });
+  await Attempt.deleteMany({ exam: exam._id });
+
+  if (exam.sourcePdfPath && fs.existsSync(exam.sourcePdfPath)) {
+    fs.unlink(exam.sourcePdfPath, () => {});
+  }
+
+  await exam.deleteOne();
+  res.json({ message: 'পরীক্ষাটি ডিলিট হয়েছে' });
+};};
