@@ -1,0 +1,143 @@
+// ================== features/exam/examSlice.js ==================
+// Teacher সাইডের Exam CRUD, সেটিংস, রেজাল্ট ম্যানেজ করার slice
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import axiosClient from '../../api/axiosClient';
+
+export const uploadExamPdf = createAsyncThunk('exam/uploadPdf', async (formData, { rejectWithValue }) => {
+  try {
+    const { data } = await axiosClient.post('/exams/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || 'আপলোড ব্যর্থ হয়েছে');
+  }
+});
+
+export const fetchMyExams = createAsyncThunk('exam/fetchMy', async (_, { rejectWithValue }) => {
+  try {
+    const { data } = await axiosClient.get('/exams');
+    return data;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message);
+  }
+});
+
+export const fetchExamById = createAsyncThunk('exam/fetchById', async (id, { rejectWithValue }) => {
+  try {
+    const { data } = await axiosClient.get(`/exams/${id}`);
+    return data;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message);
+  }
+});
+
+export const updateExamSettings = createAsyncThunk(
+  'exam/updateSettings',
+  async ({ id, payload }, { rejectWithValue }) => {
+    try {
+      const { data } = await axiosClient.put(`/exams/${id}/settings`, payload);
+      return data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message);
+    }
+  }
+);
+
+export const publishExam = createAsyncThunk('exam/publish', async (id, { rejectWithValue }) => {
+  try {
+    const { data } = await axiosClient.post(`/exams/${id}/publish`);
+    return data;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message);
+  }
+});
+
+export const fetchExamResults = createAsyncThunk('exam/fetchResults', async (id, { rejectWithValue }) => {
+  try {
+    const { data } = await axiosClient.get(`/exams/${id}/results`);
+    return data;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message);
+  }
+});
+
+export const deleteQuestion = createAsyncThunk('exam/deleteQuestion', async (questionId, { rejectWithValue }) => {
+  try {
+    await axiosClient.delete(`/exams/questions/${questionId}`);
+    return questionId;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message);
+  }
+});
+
+export const updateQuestion = createAsyncThunk(
+  'exam/updateQuestion',
+  async ({ questionId, payload }, { rejectWithValue }) => {
+    try {
+      const { data } = await axiosClient.put(`/exams/questions/${questionId}`, payload);
+      return data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message);
+    }
+  }
+);
+
+const examSlice = createSlice({
+  name: 'exam',
+  initialState: {
+    myExams: [],
+    currentExam: null,
+    questions: [],
+    results: [],
+    shareLink: null,
+    status: 'idle',
+    error: null,
+  },
+  reducers: {
+    clearCurrentExam: (state) => {
+      state.currentExam = null;
+      state.questions = [];
+      state.shareLink = null;
+    },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(uploadExamPdf.fulfilled, (state, action) => {
+        state.currentExam = action.payload.exam;
+      })
+      .addCase(fetchMyExams.fulfilled, (state, action) => {
+        state.myExams = action.payload;
+      })
+      .addCase(fetchExamById.fulfilled, (state, action) => {
+        state.currentExam = action.payload.exam;
+        state.questions = action.payload.questions;
+      })
+      .addCase(updateExamSettings.fulfilled, (state, action) => {
+        state.currentExam = action.payload;
+      })
+      .addCase(publishExam.fulfilled, (state, action) => {
+        state.currentExam = action.payload.exam;
+        state.shareLink = action.payload.shareLink;
+      })
+      .addCase(fetchExamResults.fulfilled, (state, action) => {
+        state.results = action.payload;
+      })
+      .addCase(deleteQuestion.fulfilled, (state, action) => {
+        state.questions = state.questions.filter((q) => q._id !== action.payload);
+      })
+      .addCase(updateQuestion.fulfilled, (state, action) => {
+        const idx = state.questions.findIndex((q) => q._id === action.payload._id);
+        if (idx !== -1) state.questions[idx] = action.payload;
+      })
+      .addMatcher(
+        (action) => action.type.startsWith('exam/') && action.type.endsWith('/rejected'),
+        (state, action) => {
+          state.error = action.payload;
+        }
+      );
+  },
+});
+
+export const { clearCurrentExam } = examSlice.actions;
+export default examSlice.reducer;
