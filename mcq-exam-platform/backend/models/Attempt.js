@@ -42,7 +42,7 @@ const attemptSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// একই স্টুডেন্ট (রোল দিয়ে) একই পরীক্ষা একাধিকবার দিতে পারবে না
-attemptSchema.index({ exam: 1, studentRoll: 1 }, { unique: true });
+// রোল অনুযায়ী দ্রুত খোঁজার জন্য ইনডেক্স (ইউনিক না — Repetition অন থাকলে একই রোল একাধিকবার Attempt নিতে পারে)
+attemptSchema.index({ exam: 1, studentRoll: 1 });
 
 module.exports = mongoose.model('Attempt', attemptSchema);
