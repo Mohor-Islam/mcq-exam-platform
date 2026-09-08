@@ -1,5 +1,6 @@
-// ================== controllers/attemptController.js ==================
+_// ================== controllers/attemptController.js ==================
 // স্টুডেন্ট সাইডের এক্সাম দেয়া, উত্তর দেয়া এবং সাবমিট করার লজিক
+const fs = require('fs');
 const Exam = require('../models/Exam');
 const Question = require('../models/Question');
 const Attempt = require('../models/Attempt');
@@ -33,14 +34,12 @@ exports.joinExam = async (req, res) => {
       return res.status(400).json({ message: 'তুমি ইতিমধ্যে এই পরীক্ষা জমা দিয়েছো' });
     }
     if (existing && existing.status === 'in-progress') {
-      // আগে থেকে চলমান থাকলে সেটাই ফেরত দাও (রিফ্রেশ করলে যেন আবার শুরু না হয়)
       const questions = await Question.find({ _id: { $in: existing.questionOrder } });
       return res.json(buildStudentExamPayload(exam, existing, questions));
     }
 
     let questions = await Question.find({ exam: exam._id }).sort({ order: 1 });
 
-    // Total Questions to use সেটিং অনুযায়ী কতগুলো প্রশ্ন নেয়া হবে
     const limit = exam.settings.totalQuestionsToUse;
     if (limit && limit > 0 && limit < questions.length) {
       questions = shuffleArray(questions).slice(0, limit);
@@ -49,7 +48,6 @@ exports.joinExam = async (req, res) => {
       questions = shuffleArray(questions);
     }
 
-    // অপশন শাফল হলে প্রতিটা প্রশ্নের জন্য একটা ম্যাপিং সেভ রাখা হয়
     const optionOrderMap = {};
     if (exam.settings.shuffleOptions) {
       questions.forEach((q) => {
@@ -79,7 +77,6 @@ exports.joinExam = async (req, res) => {
   }
 };
 
-// স্টুডেন্টকে যা পাঠানো হবে তাতে সঠিক উত্তর কখনোই থাকবে না
 function buildStudentExamPayload(exam, attempt, questions) {
   const optionOrderMap = attempt.optionOrderMap || {};
   const safeQuestions = questions.map((q) => {
@@ -101,14 +98,13 @@ function buildStudentExamPayload(exam, attempt, questions) {
 exports.saveAnswer = async (req, res) => {
   try {
     const { attemptId } = req.params;
-    const { questionId, selectedOptionIndex } = req.body; // এটা "শাফলড" ইনডেক্স
+    const { questionId, selectedOptionIndex } = req.body;
 
     const attempt = await Attempt.findById(attemptId);
     if (!attempt) return res.status(404).json({ message: 'Attempt পাওয়া যায়নি' });
     if (attempt.status === 'submitted')
       return res.status(400).json({ message: 'পরীক্ষা ইতিমধ্যে জমা হয়ে গেছে' });
 
-    // শাফলড ইনডেক্সকে অরিজিনাল ইনডেক্সে কনভার্ট করা হচ্ছে
     const orderMap = attempt.optionOrderMap?.[questionId];
     const originalIndex =
       orderMap && selectedOptionIndex !== null ? orderMap[selectedOptionIndex] : selectedOptionIndex;
@@ -134,10 +130,12 @@ exports.submitAttempt = async (req, res) => {
 
     const attempt = await Attempt.findById(attemptId);
     if (!attempt) return res.status(404).json({ message: 'Attempt পাওয়া যায়নি' });
-    if (attempt.status === 'submitted')
-      return res.json(await buildResultPayload(attempt)); // আগেই সাবমিট হলে রেজাল্টই ফেরত দাও
 
     const exam = await Exam.findById(attempt.exam);
+
+    if (attempt.status === 'submitted')
+      return res.json(await buildResultPayload(attempt, exam, exam.settings.showResultInstantly));
+
     const questions = await Question.find({ _id: { $in: attempt.questionOrder } });
     const qMap = {};
     questions.forEach((q) => (qMap[q._id.toString()] = q));
@@ -173,13 +171,20 @@ exports.submitAttempt = async (req, res) => {
     attempt.status = 'submitted';
     await attempt.save();
 
-    res.json(await buildResultPayload(attempt, exam.settings.showResultInstantly));
+    res.json(await buildResultPayload(attempt, exam, exam.settings.showResultInstantly));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-async function buildResultPayload(attempt, showInstantly = true) {
+async function buildResultPayload(attempt, exam, showInstantly = true) {
+  const resource =
+    exam?.resource?.kind === 'link'
+      ? { kind: 'link', link: exam.resource.link }
+      : exam?.resource?.kind === 'pdf'
+      ? { kind: 'pdf', pdfName: exam.resource.pdfOriginalName }
+      : null;
+
   return {
     attemptId: attempt._id,
     totalCorrect: attempt.totalCorrect,
@@ -188,6 +193,7 @@ async function buildResultPayload(attempt, showInstantly = true) {
     obtainedMarks: attempt.obtainedMarks,
     showInstantly,
     submittedAt: attempt.submittedAt,
+    resource,
   };
 }
 
@@ -239,6 +245,27 @@ exports.downloadResultPdf = async (req, res) => {
     });
 
     doc.end();
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// ---------- ৫. শিক্ষকের দেয়া অতিরিক্ত রিসোর্স PDF ডাউনলোড (Result পেজ থেকে) ----------
+exports.downloadResourcePdf = async (req, res) => {
+  try {
+    const attempt = await Attempt.findById(req.params.attemptId);
+    if (!attempt || attempt.status !== 'submitted')
+      return res.status(400).json({ message: 'পরীক্ষা এখনো জমা হয়নি' });
+
+    const exam = await Exam.findById(attempt.exam);
+    if (!exam?.resource || exam.resource.kind !== 'pdf' || !exam.resource.pdfPath) {
+      return res.status(404).json({ message: 'কোনো PDF পাওয়া যায়নি' });
+    }
+    if (!fs.existsSync(exam.resource.pdfPath)) {
+      return res.status(404).json({ message: 'PDF ফাইলটি সার্ভারে খুঁজে পাওয়া যায়নি' });
+    }
+
+    res.download(exam.resource.pdfPath, exam.resource.pdfOriginalName || 'resource.pdf');
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
