@@ -23,7 +23,10 @@ exports.joinExam = async (req, res) => {
     const { examCode, studentName, studentRoll, studentPhone, accessCode } = req.body;
 
     const exam = await Exam.findOne({ examCode });
-       if (exam.accessCode && exam.accessCode !== accessCode)
+    if (!exam || exam.status !== 'published')
+      return res.status(400).json({ message: 'পরীক্ষাটি খুঁজে পাওয়া যায়নি বা চালু নেই' });
+
+    if (exam.accessCode && exam.accessCode !== accessCode)
       return res.status(401).json({ message: 'ভুল Access Code' });
 
     const allowRepetition = exam.settings.allowRepetition;
@@ -46,10 +49,10 @@ exports.joinExam = async (req, res) => {
         return res.json(buildStudentExamPayload(exam, existingInProgress, questions));
       }
     }
-    }
 
     let questions = await Question.find({ exam: exam._id }).sort({ order: 1 });
 
+    // Total Questions to use সেটিং অনুযায়ী কতগুলো প্রশ্ন নেয়া হবে
     const limit = exam.settings.totalQuestionsToUse;
     if (limit && limit > 0 && limit < questions.length) {
       questions = shuffleArray(questions).slice(0, limit);
@@ -58,6 +61,7 @@ exports.joinExam = async (req, res) => {
       questions = shuffleArray(questions);
     }
 
+    // অপশন শাফল হলে প্রতিটা প্রশ্নের জন্য একটা ম্যাপিং সেভ রাখা হয়
     const optionOrderMap = {};
     if (exam.settings.shuffleOptions) {
       questions.forEach((q) => {
@@ -87,6 +91,7 @@ exports.joinExam = async (req, res) => {
   }
 };
 
+// স্টুডেন্টকে যা পাঠানো হবে তাতে সঠিক উত্তর কখনোই থাকবে না
 function buildStudentExamPayload(exam, attempt, questions) {
   const optionOrderMap = attempt.optionOrderMap || {};
   const safeQuestions = questions.map((q) => {
@@ -224,7 +229,7 @@ exports.downloadResultPdf = async (req, res) => {
 
     const doc = new PDFDocument({ margin: 40 });
     doc.pipe(res);
-    
+
     const fontPath = path.join(__dirname, '..', 'fonts', 'NotoSansBengali-Regular.ttf');
     if (fs.existsSync(fontPath)) {
       doc.registerFont('Bangla', fontPath);
@@ -286,6 +291,7 @@ exports.downloadResourcePdf = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
 // ---------- ৬. প্রশ্ন-ভিত্তিক বিস্তারিত রিভিউ (রেজাল্ট পেজে All/Correct/Wrong/Skipped ফিল্টারের জন্য) ----------
 exports.getAttemptReview = async (req, res) => {
   try {
