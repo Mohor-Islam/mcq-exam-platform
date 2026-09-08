@@ -1,6 +1,10 @@
 // ================== server.js ==================
 // এটাই ব্যাকএন্ডের মূল এন্ট্রি পয়েন্ট। এখানে Express app সেটআপ, DB কানেকশন
-// এবং সব রাউট মাউন্ট করা হয়েছে।
+// এবং সব রাউট মাউন্ট করা হয়েছে।const fs = require('fs');
+const uploadDir = './uploads';
+if (!fs.existsSync(uploadDir)){
+    fs.mkdirSync(uploadDir);
+}
 
 require('dotenv').config();
 const express = require('express');
