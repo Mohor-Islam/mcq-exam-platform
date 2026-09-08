@@ -179,4 +179,9 @@ const examSlice = createSlice({
 });
 
 export const { clearCurrentExam, clearError } = examSlice.actions;
-export default examSlice.reducer;
+export default examSlice.reducer;  
+// যদি তোমার function এর নাম fetchExams হয়
+export { fetchExams as fetchMyExams };
+
+// যদি নাম fetchTeacherExams হয়
+export { fetchTeacherExams as fetchMyExams };
