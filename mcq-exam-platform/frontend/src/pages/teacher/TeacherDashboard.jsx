@@ -13,11 +13,12 @@ const statusColor = {
 
 export default function TeacherDashboard() {
   const dispatch = useDispatch();
-  const { myExams, loading, error } = useSelector((s) => s.exam);
+  // ✅ ঠিক করা হলো: examSlice এর initialState এ ভ্যারিয়েবলের নাম "exams", "myExams" না
+  const { exams: examList, loading, error } = useSelector((s) => s.exam);
   const { user } = useSelector((s) => s.auth);
 
-  // ✅ myExams undefined হলেও যেন crash না করে, তার জন্য fallback
-  const exams = Array.isArray(myExams) ? myExams : [];
+  // ✅ এখনো একটা নিরাপত্তা ফলব্যাক, যদি কখনো undefined হয়ে যায়
+  const exams = Array.isArray(examList) ? examList : [];
 
   useEffect(() => {
     dispatch(fetchMyExams());
