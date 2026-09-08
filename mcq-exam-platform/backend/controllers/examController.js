@@ -23,7 +23,7 @@ exports.uploadExamPdf = async (req, res) => {
       });
     }
 
-    const examCode = nanoid(8); // শেয়ারযোগ্য লিংকের জন্য ইউনিক কোড
+    const examCode = nanoid(8);
 
     const exam = await Exam.create({
       teacher: req.user.id,
@@ -125,7 +125,7 @@ exports.addQuestion = async (req, res) => {
 
 // প্রশ্নের ক্রম পরিবর্তন — শরীরে [{questionId, order}, ...] পাঠাতে হবে
 exports.reorderQuestions = async (req, res) => {
-  const { orderList } = req.body; // [{ questionId, order }]
+  const { orderList } = req.body;
   await Promise.all(
     orderList.map((item) => Question.findByIdAndUpdate(item.questionId, { order: item.order }))
   );
@@ -143,7 +143,6 @@ exports.getExamResults = async (req, res) => {
   res.json(attempts);
 };
 
-// একজন স্টুডেন্ট কোন প্রশ্নে কী উত্তর দিয়েছে তার ডিটেইলস
 exports.getAttemptDetails = async (req, res) => {
   const attempt = await Attempt.findById(req.params.attemptId).populate('answers.question');
   if (!attempt) return res.status(404).json({ message: 'পাওয়া যায়নি' });
@@ -178,7 +177,6 @@ exports.getExamByCode = async (req, res) => {
   if (exam.status !== 'published')
     return res.status(400).json({ message: 'পরীক্ষাটি এখনো চালু হয়নি অথবা বন্ধ হয়ে গেছে' });
 
-  // সময়সূচি চেক
   const { schedule } = exam.settings;
   if (schedule?.enabled) {
     const now = new Date();
@@ -194,6 +192,8 @@ exports.getExamByCode = async (req, res) => {
     requiresAccessCode: !!exam.accessCode,
     totalTimeMinutes: exam.settings.totalTimeMinutes,
   });
+};
+
 // ---------- ১০. পুরো Exam ডিলিট করা (প্রশ্ন, রেজাল্ট ও PDF ফাইলসহ) ----------
 exports.deleteExam = async (req, res) => {
   const exam = await Exam.findById(req.params.id);
@@ -211,8 +211,8 @@ exports.deleteExam = async (req, res) => {
   await exam.deleteOne();
   res.json({ message: 'পরীক্ষাটি ডিলিট হয়েছে' });
 };
-// ---------- রেজাল্ট পেজে দেখানোর জন্য অতিরিক্ত রিসোর্স (Google Drive লিংক বা PDF) সেট করা ----------
-// শিক্ষক দুটার যেকোনো একটা দিলেই হবে — নতুন একটা সেট করলে আগেরটা মুছে যাবে
+
+// ---------- ১১. রেজাল্ট পেজে দেখানোর জন্য অতিরিক্ত রিসোর্স (Google Drive লিংক বা PDF) সেট করা ----------
 exports.setResourceLink = async (req, res) => {
   const exam = await Exam.findById(req.params.id);
   if (!exam) return res.status(404).json({ message: 'Exam পাওয়া যায়নি' });
@@ -264,57 +264,4 @@ exports.removeResource = async (req, res) => {
   exam.resource = { kind: null, link: undefined, pdfPath: undefined, pdfOriginalName: undefined };
   await exam.save();
   res.json(exam);
-};// ---------- রেজাল্ট পেজে দেখানোর জন্য অতিরিক্ত রিসোর্স (Google Drive লিংক বা PDF) সেট করা ----------
-// শিক্ষক দুটার যেকোনো একটা দিলেই হবে — নতুন একটা সেট করলে আগেরটা মুছে যাবে
-exports.setResourceLink = async (req, res) => {
-  const exam = await Exam.findById(req.params.id);
-  if (!exam) return res.status(404).json({ message: 'Exam পাওয়া যায়নি' });
-  if (exam.teacher.toString() !== req.user.id)
-    return res.status(403).json({ message: 'অনুমতি নেই' });
-
-  const { link } = req.body;
-  if (!link) return res.status(400).json({ message: 'লিংক আবশ্যক' });
-
-  if (exam.resource?.pdfPath && fs.existsSync(exam.resource.pdfPath)) {
-    fs.unlink(exam.resource.pdfPath, () => {});
-  }
-
-  exam.resource = { kind: 'link', link, pdfPath: undefined, pdfOriginalName: undefined };
-  await exam.save();
-  res.json(exam);
 };
-
-exports.setResourcePdf = async (req, res) => {
-  const exam = await Exam.findById(req.params.id);
-  if (!exam) return res.status(404).json({ message: 'Exam পাওয়া যায়নি' });
-  if (exam.teacher.toString() !== req.user.id)
-    return res.status(403).json({ message: 'অনুমতি নেই' });
-  if (!req.file) return res.status(400).json({ message: 'PDF ফাইল আবশ্যক' });
-
-  if (exam.resource?.pdfPath && fs.existsSync(exam.resource.pdfPath)) {
-    fs.unlink(exam.resource.pdfPath, () => {});
-  }
-
-  exam.resource = {
-    kind: 'pdf',
-    pdfPath: req.file.path,
-    pdfOriginalName: req.file.originalname,
-    link: undefined,
-  };
-  await exam.save();
-  res.json(exam);
-};
-
-exports.removeResource = async (req, res) => {
-  const exam = await Exam.findById(req.params.id);
-  if (!exam) return res.status(404).json({ message: 'Exam পাওয়া যায়নি' });
-  if (exam.teacher.toString() !== req.user.id)
-    return res.status(403).json({ message: 'অনুমতি নেই' });
-
-  if (exam.resource?.pdfPath && fs.existsSync(exam.resource.pdfPath)) {
-    fs.unlink(exam.resource.pdfPath, () => {});
-  }
-  exam.resource = { kind: null, link: undefined, pdfPath: undefined, pdfOriginalName: undefined };
-  await exam.save();
-  res.json(exam);
-};};
