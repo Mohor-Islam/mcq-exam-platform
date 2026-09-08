@@ -198,3 +198,5 @@ const examSlice = createSlice({
 
 export const { clearCurrentExam } = examSlice.actions;
 export default examSlice.reducer;
+export const { clearCurrentExam } = examSlice.actions;
+export default examSlice.reducer;
