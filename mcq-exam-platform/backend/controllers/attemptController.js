@@ -1,6 +1,7 @@
 // ================== controllers/attemptController.js ==================
 // স্টুডেন্ট সাইডের এক্সাম দেয়া, উত্তর দেয়া এবং সাবমিট করার লজিক
 const fs = require('fs');
+const path = require('path');
 const Exam = require('../models/Exam');
 const Question = require('../models/Question');
 const Attempt = require('../models/Attempt');
@@ -214,6 +215,12 @@ exports.downloadResultPdf = async (req, res) => {
 
     const doc = new PDFDocument({ margin: 40 });
     doc.pipe(res);
+    
+    const fontPath = path.join(__dirname, '..', 'fonts', 'NotoSansBengali-Regular.ttf');
+    if (fs.existsSync(fontPath)) {
+      doc.registerFont('Bangla', fontPath);
+      doc.font('Bangla');
+    }
 
     doc.fontSize(18).text(exam.title, { align: 'center' });
     doc.moveDown();
