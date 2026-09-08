@@ -22,6 +22,7 @@ const examSchema = new mongoose.Schema(
       shuffleQuestions: { type: Boolean, default: false },
       shuffleOptions: { type: Boolean, default: false },
       showResultInstantly: { type: Boolean, default: true },
+            allowRepetition: { type: Boolean, default: false }, // অন থাকলে একই স্টুডেন্ট বারবার পরীক্ষা দিতে পারবে
       schedule: {
         enabled: { type: Boolean, default: false },
         startAt: { type: Date },
