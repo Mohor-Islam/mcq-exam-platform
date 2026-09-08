@@ -128,6 +128,7 @@ const examSlice = createSlice({
     currentExam: null,
     questions: [],
     results: [],
+        resultsDisabledMessage: null,
     shareLink: null,
     status: 'idle',
     error: null,
@@ -158,8 +159,15 @@ const examSlice = createSlice({
         state.currentExam = action.payload.exam;
         state.shareLink = action.payload.shareLink;
       })
-      .addCase(fetchExamResults.fulfilled, (state, action) => {
-        state.results = action.payload;
+           .addCase(fetchExamResults.fulfilled, (state, action) => {
+        if (Array.isArray(action.payload)) {
+          state.results = action.payload;
+          state.resultsDisabledMessage = null;
+        } else {
+          state.results = [];
+          state.resultsDisabledMessage = action.payload.message;
+        }
+      })
       })
       .addCase(deleteExam.fulfilled, (state, action) => {
         state.myExams = state.myExams.filter((e) => e._id !== action.payload);
