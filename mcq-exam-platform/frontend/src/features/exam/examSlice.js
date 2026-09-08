@@ -180,7 +180,7 @@ const examSlice = createSlice({
       .addCase(removeResource.fulfilled, (state, action) => {
         state.currentExam = action.payload;
       })
-      .addCase(deleteQuestion.fulfilled, (state, action) => {
+    .addCase(deleteQuestion.fulfilled, (state, action) => {
         state.questions = state.questions.filter((q) => q._id !== action.payload);
       })
       .addCase(updateQuestion.fulfilled, (state, action) => {
