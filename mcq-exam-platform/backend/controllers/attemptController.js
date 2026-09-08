@@ -1,4 +1,4 @@
-_// ================== controllers/attemptController.js ==================
+// ================== controllers/attemptController.js ==================
 // স্টুডেন্ট সাইডের এক্সাম দেয়া, উত্তর দেয়া এবং সাবমিট করার লজিক
 const fs = require('fs');
 const Exam = require('../models/Exam');
