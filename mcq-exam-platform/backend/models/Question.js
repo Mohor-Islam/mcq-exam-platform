@@ -12,6 +12,7 @@ const questionSchema = new mongoose.Schema(
       validate: (v) => v.length >= 2,
     },
     correctOptionIndex: { type: Number, required: true }, // 0=A, 1=B, 2=C, 3=D
+        explanation: { type: String }, // ঐচ্ছিক — কেন এই উত্তরটা সঠিক তার ব্যাখ্যা
     order: { type: Number, default: 0 }, // প্রশ্নের সিরিয়াল (Reorder এর জন্য)
   },
   { timestamps: true }
