@@ -2,6 +2,7 @@
 // Teacher সাইডের Exam CRUD, সেটিংস, রেজাল্ট ম্যানেজ করার slice
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axiosClient from '../../api/axiosClient';
+
 export const deleteExam = createAsyncThunk('exam/deleteExam', async (examId, { rejectWithValue }) => {
   try {
     await axiosClient.delete(`/exams/${examId}`);
@@ -10,6 +11,36 @@ export const deleteExam = createAsyncThunk('exam/deleteExam', async (examId, { r
     return rejectWithValue(err.response?.data?.message || 'ডিলিট ব্যর্থ হয়েছে');
   }
 });
+
+export const setResourceLink = createAsyncThunk('exam/setResourceLink', async ({ id, link }, { rejectWithValue }) => {
+  try {
+    const { data } = await axiosClient.put(`/exams/${id}/resource-link`, { link });
+    return data;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || 'সেভ করা যায়নি');
+  }
+});
+
+export const uploadResourcePdf = createAsyncThunk('exam/uploadResourcePdf', async ({ id, formData }, { rejectWithValue }) => {
+  try {
+    const { data } = await axiosClient.post(`/exams/${id}/resource-pdf`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || 'আপলোড ব্যর্থ হয়েছে');
+  }
+});
+
+export const removeResource = createAsyncThunk('exam/removeResource', async (id, { rejectWithValue }) => {
+  try {
+    const { data } = await axiosClient.delete(`/exams/${id}/resource`);
+    return data;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message);
+  }
+});
+
 export const uploadExamPdf = createAsyncThunk('exam/uploadPdf', async (formData, { rejectWithValue }) => {
   try {
     const { data } = await axiosClient.post('/exams/upload', formData, {
@@ -132,6 +163,15 @@ const examSlice = createSlice({
       })
       .addCase(deleteExam.fulfilled, (state, action) => {
         state.myExams = state.myExams.filter((e) => e._id !== action.payload);
+      })
+      .addCase(setResourceLink.fulfilled, (state, action) => {
+        state.currentExam = action.payload;
+      })
+      .addCase(uploadResourcePdf.fulfilled, (state, action) => {
+        state.currentExam = action.payload;
+      })
+      .addCase(removeResource.fulfilled, (state, action) => {
+        state.currentExam = action.payload;
       })
       .addCase(deleteQuestion.fulfilled, (state, action) => {
         state.questions = state.questions.filter((q) => q._id !== action.payload);
