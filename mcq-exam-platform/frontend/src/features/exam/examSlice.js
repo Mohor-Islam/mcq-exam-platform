@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import axios from 'axios';
+import axios from '../../api/axiosClient';
 
-const API_URL = '/api/exams';
+const API_URL = '/exams';
 
 // FETCH THUNKS
 export const fetchExams = createAsyncThunk('exam/fetchExams', async (_, { rejectWithValue }) => {
@@ -55,13 +55,10 @@ export const createExam = createAsyncThunk('exam/createExam', async (data, { rej
   }
 });
 
-// ⚠️ আপলোড থাংক সংশোধন (Content-Type ম্যানুয়ালি দেওয়া বাদ দেওয়া হয়েছে)
+// ⚠️ আপলোড থাংক সংশোধন (Content-Type ম্যানুয়ালি দেওয়া বাদ দেওয়া হয়েছে)
 export const uploadExamPdf = createAsyncThunk('exam/uploadExamPdf', async (formDataPayload, { rejectWithValue }) => {
   try {
-    const token = localStorage.getItem('token');
-    const headers = token ? { Authorization: `Bearer ${token}` } : {};
-
-    const r = await axios.post(`${API_URL}/upload`, formDataPayload, { headers });
+    const r = await axios.post(`${API_URL}/upload`, formDataPayload);
     return r.data;
   } catch (e) {
     return rejectWithValue(e.response?.data?.message || 'PDF upload failed');
