@@ -36,6 +36,15 @@ export const submitAttempt = createAsyncThunk(
   }
 );
 
+export const fetchReview = createAsyncThunk('attempt/fetchReview', async (attemptId, { rejectWithValue }) => {
+  try {
+    const { data } = await axiosClient.get(`/attempts/${attemptId}/review`);
+    return data;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message);
+  }
+});
+
 const attemptSlice = createSlice({
   name: 'attempt',
   initialState: {
@@ -46,6 +55,7 @@ const attemptSlice = createSlice({
     questions: [],
     answersMap: {}, // { questionId: selectedOptionIndex }
     result: null,
+    review: null,
     status: 'idle',
     error: null,
   },
@@ -55,6 +65,7 @@ const attemptSlice = createSlice({
       state.questions = [];
       state.answersMap = {};
       state.result = null;
+      state.review = null;
     },
   },
   extraReducers: (builder) => {
@@ -80,6 +91,9 @@ const attemptSlice = createSlice({
       })
       .addCase(submitAttempt.fulfilled, (state, action) => {
         state.result = action.payload;
+      })
+      .addCase(fetchReview.fulfilled, (state, action) => {
+        state.review = action.payload;
       });
   },
 });
