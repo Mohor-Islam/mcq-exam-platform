@@ -23,6 +23,17 @@ export default function StudentResult() {
     link.remove();
   };
 
+  const handleDownloadResource = async () => {
+    const res = await axiosClient.get(`/attempts/${attemptId}/resource-pdf`, { responseType: 'blob' });
+    const url = window.URL.createObjectURL(new Blob([res.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', result.resource?.pdfName || 'resource.pdf');
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+
   if (!result) return null;
 
   return (
@@ -43,6 +54,19 @@ export default function StudentResult() {
       <button onClick={handleDownload} className="w-full bg-primary-600 text-white py-2 rounded-lg font-medium mb-3">
         📄 সঠিক উত্তরসহ PDF ডাউনলোড করো
       </button>
+
+      {result.resource?.kind === 'link' && (
+        <a href={result.resource.link} target="_blank" rel="noopener noreferrer"
+          className="block w-full bg-green-600 text-white py-2 rounded-lg font-medium mb-3">
+          🔗 অতিরিক্ত রিসোর্স দেখো
+        </a>
+      )}
+      {result.resource?.kind === 'pdf' && (
+        <button onClick={handleDownloadResource} className="w-full bg-green-600 text-white py-2 rounded-lg font-medium mb-3">
+          📥 অতিরিক্ত রিসোর্স ডাউনলোড করো
+        </button>
+      )}
+
       <button onClick={() => { dispatch(resetAttempt()); navigate('/'); }} className="text-sm text-gray-500">
         হোমে ফিরে যাও
       </button>
