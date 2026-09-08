@@ -32,7 +32,13 @@ const examSchema = new mongoose.Schema(
     // শেয়ারযোগ্য লিংকের জন্য ইউনিক কোড + অতিরিক্ত এক্সেস কোড (ঐচ্ছিক পাসকোড)
     examCode: { type: String, required: true, unique: true },
     accessCode: { type: String },
-
+// পরীক্ষা শেষে স্টুডেন্টকে দেখানোর জন্য অতিরিক্ত রিসোর্স (Google Drive লিংক অথবা PDF — যেকোনো একটা)
+    resource: {
+      kind: { type: String, enum: ['link', 'pdf', null], default: null },
+      link: { type: String },
+      pdfPath: { type: String },
+      pdfOriginalName: { type: String },
+    },
     status: { type: String, enum: ['draft', 'published', 'closed'], default: 'draft' },
   },
   { timestamps: true }
