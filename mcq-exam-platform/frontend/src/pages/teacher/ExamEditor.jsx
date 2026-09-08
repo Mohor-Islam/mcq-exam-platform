@@ -103,9 +103,20 @@ export default function ExamEditor() {
             onChange={(v) => setSettings({ ...settings, shuffleOptions: v })} />
           <Toggle label="Show Result Instantly" checked={settings.showResultInstantly}
             onChange={(v) => setSettings({ ...settings, showResultInstantly: v })} />
+                    <Toggle label="Repetition (একই স্টুডেন্ট বারবার দিতে পারবে)" checked={settings.allowRepetition}
+            onChange={(v) => setSettings({ ...settings, allowRepetition: v })} />
+                  </div>
+
+    
           <Toggle label="Schedule চালু করো" checked={settings.schedule.enabled}
             onChange={(v) => setSettings({ ...settings, schedule: { ...settings.schedule, enabled: v } })} />
-        </div>
+               </div>
+
+        {settings.allowRepetition && (
+          <p className="text-sm text-amber-600 dark:text-amber-400">
+            ⚠️ Repetition অন থাকায় "রেজাল্ট" ড্যাশবোর্ডে এই পরীক্ষার টেবিল দেখানো হবে না — প্রতিটা স্টুডেন্ট শুধু নিজের রেজাল্ট নিজে দেখতে পাবে।
+          </p>
+        )}
 
         {settings.schedule.enabled && (
           <div className="grid sm:grid-cols-2 gap-4">
