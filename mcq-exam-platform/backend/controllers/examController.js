@@ -132,15 +132,22 @@ exports.reorderQuestions = async (req, res) => {
   res.json({ message: 'ক্রম আপডেট হয়েছে' });
 };
 
-// ---------- ৭. Result Dashboard ----------
 exports.getExamResults = async (req, res) => {
   const exam = await Exam.findById(req.params.id);
   if (!exam) return res.status(404).json({ message: 'Exam পাওয়া যায়নি' });
   if (exam.teacher.toString() !== req.user.id)
     return res.status(403).json({ message: 'অনুমতি নেই' });
 
+  if (exam.settings.allowRepetition) {
+    return res.json({
+      disabled: true,
+      message: 'Repetition অন করা আছে বলে এই পরীক্ষার রেজাল্ট ড্যাশবোর্ডে দেখানো হচ্ছে না। প্রতিটা স্টুডেন্ট পরীক্ষা শেষে নিজের রেজাল্ট দেখতে পাবে।',
+    });
+  }
+
   const attempts = await Attempt.find({ exam: exam._id }).sort({ obtainedMarks: -1 });
   res.json(attempts);
+};
 };
 
 exports.getAttemptDetails = async (req, res) => {
